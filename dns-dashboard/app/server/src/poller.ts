@@ -225,7 +225,7 @@ export class Poller extends EventEmitter<{ update: []; stats: [serverId: string,
   }
 
   async triggerSync() {
-    if (!this.syncClient) throw new Error('AdGuard Home Sync ist nicht konfiguriert');
+    if (!this.syncClient) throw new Error('AdGuard Home Sync is not configured');
     await this.syncClient.triggerSync();
     this.markSynced();
     // The sync runs asynchronously; look at the replicas again once it had time to finish.

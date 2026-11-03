@@ -5,16 +5,15 @@ import { CHART } from '../components/Chart';
 import { Heatmap, Lines, StackedBars, msFormat } from '../components/charts';
 import { Card, CardHeader, Empty, ErrorNote, Segmented, SeriesKey, Skeleton } from '../components/ui';
 import type { KeyCount, Overview, RangeKey, StatsBundle, TopEntry } from '../lib/api';
-import { PROTOS, REASONS, fmtCompact, fmtDateTime, fmtMs, fmtNum, fmtPct, reasonLabel, shortUpstream } from '../lib/format';
+import { PROTOS, REASONS, fmtCompact, fmtDateTime, fmtMs, fmtNum, fmtPct, listLabel, reasonLabel, shortUpstream } from '../lib/format';
 import { useApi } from '../lib/hooks';
+import { t } from '../lib/i18n';
 
-const RANGES: Array<{ value: RangeKey; label: string; prev: string }> = [
-  { value: '24h', label: '24 h', prev: 'Vortag' },
-  { value: '7d', label: '7 Tage', prev: 'Vorwoche' },
-  { value: '30d', label: '30 Tage', prev: 'Vormonat' },
-  { value: '90d', label: '90 Tage', prev: 'Vorquartal' },
-  { value: '365d', label: '1 Jahr', prev: 'Vorjahr' },
-];
+const RANGES = (['24h', '7d', '30d', '90d', '365d'] as const).map((value) => ({
+  value: value as RangeKey,
+  label: t(`range.${value}`),
+  prev: t(`period.${value}`),
+}));
 
 export function StatisticsPage({ o }: { o: Overview | null }) {
   const [range, setRange] = useState<RangeKey>('24h');
@@ -29,9 +28,9 @@ export function StatisticsPage({ o }: { o: Overview | null }) {
     <div className="space-y-5">
       <div className="flex flex-wrap items-center gap-3">
         <Segmented value={range} onChange={setRange} options={RANGES} />
-        <Segmented value={server} onChange={setServer} options={[{ value: 'all', label: 'Beide Server' }, ...servers.map((s) => ({ value: s.id, label: s.name }))]} />
+        <Segmented value={server} onChange={setServer} options={[{ value: 'all', label: t('common.bothServers') }, ...servers.map((s) => ({ value: s.id, label: s.name }))]} />
         <div className="ml-auto flex items-center gap-3">
-          {loading && <span className="text-xs text-ink-3">lädt …</span>}
+          {loading && <span className="text-xs text-ink-3">{t('common.loading')}</span>}
           {data && (
             <button onClick={() => exportCsv(data, names)} className="inline-flex items-center gap-1.5 rounded-xl border border-line bg-white/[0.04] px-3 py-1.5 text-[13px] text-ink-2 hover:bg-white/[0.08] hover:text-ink">
               <Download className="size-4" /> CSV
@@ -40,13 +39,13 @@ export function StatisticsPage({ o }: { o: Overview | null }) {
         </div>
       </div>
 
-      {error && <ErrorNote>Statistik konnte nicht geladen werden: {error}</ErrorNote>}
+      {error && <ErrorNote>{t('st.loadError', { e: error })}</ErrorNote>}
       {!data ? (
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-6">
           {Array.from({ length: 6 }, (_, i) => (
-            <Skeleton key={i} className="h-28 rounded-2xl" />
+            <Skeleton key={i} className="h-28 rounded-xl" />
           ))}
-          <Skeleton className="col-span-full h-80 rounded-2xl" />
+          <Skeleton className="col-span-full h-80 rounded-xl" />
         </div>
       ) : (
         <StatsBody d={data} colors={colors} names={names} prevLabel={prevLabel} />
@@ -56,7 +55,7 @@ export function StatisticsPage({ o }: { o: Overview | null }) {
 }
 
 function StatsBody({ d, colors, names, prevLabel }: { d: StatsBundle; colors: Record<string, string>; names: Record<string, string>; prevLabel: string }) {
-  const t = d.totals;
+  const tot = d.totals;
   const p = d.previous;
   const hasPrev = !!p && p.queries > 0;
   const from = d.coverage.statsFrom ?? d.coverage.logFrom;
@@ -67,19 +66,17 @@ function StatsBody({ d, colors, names, prevLabel }: { d: StatsBundle; colors: Re
       {partial && (
         <div className="flex items-start gap-3 rounded-xl border border-line bg-white/[0.03] px-4 py-3 text-[13px] text-ink-2">
           <CalendarClock className="mt-0.5 size-4 shrink-0 text-ink-3" />
-          <span>
-            Das Dashboard sammelt seit <b className="text-ink">{fmtDateTime(from!)}</b> eigene Historie. Längere Zeiträume füllen sich mit der Zeit – AdGuard Home selbst liefert nur die letzten 24 Stunden stündlich.
-          </span>
+          <span>{t('st.historyNote', { from: fmtDateTime(from!) })}</span>
         </div>
       )}
 
       <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-6">
-        <Tile label="Anfragen" value={fmtCompact(t.queries)} delta={hasPrev && <Delta now={t.queries} prev={p?.queries} label={prevLabel} />} />
-        <Tile label="Block-Rate" value={fmtPct(t.blockedPct)} sub={`${fmtNum(t.blocked)} geblockt`} delta={hasPrev && <Delta now={t.blockedPct} prev={p?.blockedPct} unit="pp" label={prevLabel} />} />
-        <Tile label="Ø Antwortzeit" value={fmtMs(t.avgMs)} sub="laut Query-Log" delta={hasPrev && t.avgMs !== null && <Delta now={t.avgMs} prev={p?.avgMs} goodWhenUp={false} label={prevLabel} />} />
-        <Tile label="Cache-Trefferquote" value={fmtPct(t.cacheHitPct)} sub="aus dem DNS-Cache beantwortet" />
-        <Tile label="NXDOMAIN" value={fmtPct(t.nxdomainPct)} sub={t.servfailPct ? `SERVFAIL ${fmtPct(t.servfailPct)}` : 'nicht existierende Domains'} />
-        <Tile label="Clients" value={fmtNum(t.clients)} sub={t.dnssecPct !== null ? `DNSSEC-validiert ${fmtPct(t.dnssecPct)}` : undefined} />
+        <Tile label={t('st.queries')} value={fmtCompact(tot.queries)} delta={hasPrev && <Delta now={tot.queries} prev={p?.queries} label={prevLabel} />} />
+        <Tile label={t('st.blockRate')} value={fmtPct(tot.blockedPct)} sub={t('st.blockedN', { n: fmtNum(tot.blocked) })} delta={hasPrev && <Delta now={tot.blockedPct} prev={p?.blockedPct} unit="pp" label={prevLabel} />} />
+        <Tile label={t('st.avgResponse')} value={fmtMs(tot.avgMs)} sub={t('st.fromLog')} delta={hasPrev && tot.avgMs !== null && <Delta now={tot.avgMs} prev={p?.avgMs} goodWhenUp={false} label={prevLabel} />} />
+        <Tile label={t('st.cacheHit')} value={fmtPct(tot.cacheHitPct)} sub={t('st.cacheHitHint')} />
+        <Tile label="NXDOMAIN" value={fmtPct(tot.nxdomainPct)} sub={tot.servfailPct ? t('st.servfail', { v: fmtPct(tot.servfailPct) }) : t('st.nxdomainHint')} />
+        <Tile label={t('st.clients')} value={fmtNum(tot.clients)} sub={tot.dnssecPct !== null ? t('st.dnssec', { v: fmtPct(tot.dnssecPct) }) : undefined} />
       </div>
 
       <TrafficCard d={d} colors={colors} names={names} />
@@ -87,12 +84,12 @@ function StatsBody({ d, colors, names, prevLabel }: { d: StatsBundle; colors: Re
       <div className="grid gap-5 lg:grid-cols-2">
         <LoadShareCard d={d} colors={colors} names={names} />
         <Card>
-          <CardHeader title="Ø Antwortzeit" subtitle="pro Zeitabschnitt, alle ausgewählten Server (aus dem Query-Log)" />
+          <CardHeader title={t('st.avgTime')} subtitle={t('st.avgTimeHint')} />
           <div className="px-3 pb-3">
             {d.series.avgMs.some((v) => v !== null) ? (
-              <Lines t={d.t} unit={d.unit} series={[{ name: 'Ø Antwortzeit', color: CHART.allowed, data: d.series.avgMs }]} format={msFormat} axisFormat={(v) => `${v} ms`} height={220} />
+              <Lines t={d.t} unit={d.unit} series={[{ name: t('st.avgTime'), color: CHART.allowed, data: d.series.avgMs }]} format={msFormat} axisFormat={(v) => `${v} ms`} height={220} />
             ) : (
-              <Empty>Noch keine Query-Log-Daten</Empty>
+              <Empty>{t('st.noLogData')}</Empty>
             )}
           </div>
         </Card>
@@ -101,17 +98,17 @@ function StatsBody({ d, colors, names, prevLabel }: { d: StatsBundle; colors: Re
       <HeatmapCard d={d} />
 
       <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-        <Breakdown title="Ergebnis der Filterung" icon={<Filter className="size-4" />} items={d.reasons} label={reasonLabel} colorOf={(k) => (REASONS[k]?.tone === 'blocked' ? CHART.blocked : CHART.allowed)} note="Anteil am Query-Log" />
-        <Breakdown title="Anfragetypen" icon={<BarChart3 className="size-4" />} items={d.qtypes} />
-        <Breakdown title="Antwortcodes" icon={<Sparkles className="size-4" />} items={d.rcodes} />
-        <Breakdown title="Protokolle" icon={<Network className="size-4" />} items={d.protos} label={(k) => PROTOS[k] ?? k} />
-        <Breakdown title="Treffer je Filterliste" icon={<Ban className="size-4" />} items={d.filterLists} color={CHART.blocked} note="Welche Liste hat wie oft gegriffen" />
-        <Breakdown title="Blockierte Dienste" icon={<Ban className="size-4" />} items={d.services} color={CHART.blocked} empty="Keine Dienste blockiert" />
+        <Breakdown title={t('st.reasons')} icon={<Filter className="size-4" />} items={d.reasons} label={reasonLabel} colorOf={(k) => (REASONS[k]?.tone === 'blocked' ? CHART.blocked : CHART.allowed)} note={t('st.shareOfLog')} />
+        <Breakdown title={t('st.qtypes')} icon={<BarChart3 className="size-4" />} items={d.qtypes} />
+        <Breakdown title={t('st.rcodes')} icon={<Sparkles className="size-4" />} items={d.rcodes} />
+        <Breakdown title={t('st.protocols')} icon={<Network className="size-4" />} items={d.protos} label={(k) => PROTOS[k] ?? k} />
+        <Breakdown title={t('st.lists')} icon={<Ban className="size-4" />} items={d.filterLists} label={(k) => listLabel(k)} color={CHART.blocked} note={t('st.listsHint')} />
+        <Breakdown title={t('st.services')} icon={<Ban className="size-4" />} items={d.services} color={CHART.blocked} empty={t('st.noServices')} />
       </div>
 
       <div className="grid gap-5 xl:grid-cols-5">
         <Card className="xl:col-span-2">
-          <CardHeader title="Upstreams" icon={<Network className="size-4" />} subtitle="nicht gecachte Anfragen" />
+          <CardHeader title={t('ov.upstreams')} icon={<Network className="size-4" />} subtitle={t('st.upstreamsHint')} />
           <UpstreamTable items={d.upstreams} />
         </Card>
         <TopTables d={d} colors={colors} names={names} prevLabel={prevLabel} />
@@ -138,16 +135,16 @@ function TrafficCard({ d, colors, names }: { d: StatsBundle; colors: Record<stri
     const q = d.t.map((_, i) => ids.reduce((a, id) => a + d.series.queries[id][i], 0));
     const b = d.t.map((_, i) => ids.reduce((a, id) => a + d.series.blocked[id][i], 0));
     return [
-      { name: 'Erlaubt', color: CHART.allowed, data: q.map((v, i) => Math.max(0, v - b[i])) },
-      { name: 'Geblockt', color: CHART.blocked, data: b },
+      { name: t('common.allowed'), color: CHART.allowed, data: q.map((v, i) => Math.max(0, v - b[i])) },
+      { name: t('common.blocked'), color: CHART.blocked, data: b },
     ];
   }, [d, mode, colors, names]);
   const empty = series.every((s) => s.data.every((v) => !v));
   return (
     <Card>
       <CardHeader
-        title="Anfragen und Blockierungen"
-        subtitle={d.unit === 'hour' ? 'stündlich' : 'täglich'}
+        title={t('st.traffic')}
+        subtitle={d.unit === 'hour' ? t('st.hourly') : t('st.daily')}
         right={
           <>
             <div className="mr-2 hidden gap-3 sm:flex">
@@ -155,11 +152,11 @@ function TrafficCard({ d, colors, names }: { d: StatsBundle; colors: Record<stri
                 <SeriesKey key={s.name} color={s.color} label={s.name} />
               ))}
             </div>
-            <Segmented size="sm" value={mode} onChange={setMode} options={[{ value: 'status', label: 'Erlaubt / Geblockt' }, { value: 'server', label: 'Nach Server' }]} />
+            <Segmented size="sm" value={mode} onChange={setMode} options={[{ value: 'status', label: t('ov.byStatus') }, { value: 'server', label: t('ov.byServer') }]} />
           </>
         }
       />
-      <div className="px-3 pb-3">{empty ? <Empty>Für diesen Zeitraum liegen noch keine Daten vor</Empty> : <StackedBars t={d.t} unit={d.unit} series={series} height={300} />}</div>
+      <div className="px-3 pb-3">{empty ? <Empty>{t('st.noDataRange')}</Empty> : <StackedBars t={d.t} unit={d.unit} series={series} height={300} />}</div>
     </Card>
   );
 }
@@ -179,8 +176,8 @@ function LoadShareCard({ d, colors, names }: { d: StatsBundle; colors: Record<st
   return (
     <Card>
       <CardHeader
-        title="Lastverteilung"
-        subtitle={ids.length > 1 ? 'Anteil je Server an allen Anfragen' : 'nur ein Server ausgewählt'}
+        title={t('st.loadSplit')}
+        subtitle={ids.length > 1 ? t('st.loadSplitHint') : t('st.oneServer')}
         right={
           <div className="flex gap-3">
             {series.map((s) => (
@@ -195,11 +192,11 @@ function LoadShareCard({ d, colors, names }: { d: StatsBundle; colors: Record<st
             <SplitBar parts={totals.map((x) => ({ color: colors[x.id], value: x.value, label: names[x.id] }))} className="h-2" />
           </div>
           <div className="px-3 pb-3">
-            <Lines t={d.t} unit={d.unit} series={series} stackPercent format={(v) => fmtPct(v)} axisFormat={(v) => `${v} %`} height={200} />
+            <Lines t={d.t} unit={d.unit} series={series} stackPercent format={(v) => fmtPct(v)} axisFormat={(v) => fmtPct(v, 0)} height={200} />
           </div>
         </>
       ) : (
-        <Empty>Wähle „Beide Server“, um die Verteilung zu sehen.</Empty>
+        <Empty>{t('st.pickBoth')}</Empty>
       )}
     </Card>
   );
@@ -210,9 +207,9 @@ function HeatmapCard({ d }: { d: StatsBundle }) {
   return (
     <Card>
       <CardHeader
-        title="Wochenrhythmus"
-        subtitle={mode === 'queries' ? 'Ø Anfragen je Stunde nach Wochentag (mind. 7 Tage)' : 'Block-Rate nach Wochentag und Uhrzeit'}
-        right={<Segmented size="sm" value={mode} onChange={setMode} options={[{ value: 'queries', label: 'Anfragen' }, { value: 'blocked', label: 'Block-Rate' }]} />}
+        title={t('st.weekly')}
+        subtitle={mode === 'queries' ? t('st.weeklyQueries') : t('st.weeklyBlocked')}
+        right={<Segmented size="sm" value={mode} onChange={setMode} options={[{ value: 'queries', label: t('st.queries') }, { value: 'blocked', label: t('st.blockRate') }]} />}
       />
       <div className="overflow-x-auto px-3 pb-3">
         <div className="min-w-[560px]">
@@ -223,7 +220,7 @@ function HeatmapCard({ d }: { d: StatsBundle }) {
   );
 }
 
-function Breakdown({ title, icon, items, label, color = CHART.allowed, colorOf, note, empty = 'Noch keine Daten' }: { title: string; icon: React.ReactNode; items: KeyCount[] | Array<{ key: string; count: number }>; label?: (k: string) => string; color?: string; colorOf?: (k: string) => string; note?: string; empty?: string }) {
+function Breakdown({ title, icon, items, label, color = CHART.allowed, colorOf, note, empty = t('common.noData') }: { title: string; icon: React.ReactNode; items: KeyCount[] | Array<{ key: string; count: number }>; label?: (k: string) => string; color?: string; colorOf?: (k: string) => string; note?: string; empty?: string }) {
   const total = items.reduce((a, i) => a + i.count, 0);
   return (
     <Card>
@@ -238,16 +235,16 @@ function Breakdown({ title, icon, items, label, color = CHART.allowed, colorOf, 
 }
 
 function UpstreamTable({ items }: { items: KeyCount[] }) {
-  if (!items.length) return <Empty>Keine Upstream-Daten</Empty>;
+  if (!items.length) return <Empty>{t('ov.noUpstreams')}</Empty>;
   const total = items.reduce((a, i) => a + i.count, 0);
   return (
     <div className="overflow-x-auto px-5 pb-4">
       <table className="w-full text-[13px]">
         <thead>
           <tr className="text-left text-xs text-ink-3">
-            <th className="py-2 font-medium">Upstream</th>
-            <th className="py-2 text-right font-medium">Anteil</th>
-            <th className="py-2 text-right font-medium">Ø Zeit</th>
+            <th className="py-2 font-medium">{t('st.colUpstream')}</th>
+            <th className="py-2 text-right font-medium">{t('st.colShare')}</th>
+            <th className="py-2 text-right font-medium">{t('st.colAvg')}</th>
           </tr>
         </thead>
         <tbody>
@@ -272,34 +269,34 @@ function TopTables({ d, colors, names, prevLabel }: { d: StatsBundle; colors: Re
   return (
     <Card className="xl:col-span-3">
       <CardHeader
-        title="Top-Listen"
+        title={t('st.tops')}
         icon={tab === 'clients' ? <Laptop className="size-4" /> : <Globe className="size-4" />}
-        subtitle={`Trend im Zeitraum · Rang ggü. ${prevLabel}`}
+        subtitle={t('st.topsHint', { period: prevLabel })}
         right={
           <Segmented
             size="sm"
             value={tab}
             onChange={setTab}
             options={[
-              { value: 'blocked', label: 'Geblockt' },
-              { value: 'domains', label: 'Domains' },
-              { value: 'clients', label: 'Clients' },
+              { value: 'blocked', label: t('st.tabBlocked') },
+              { value: 'domains', label: t('st.tabDomains') },
+              { value: 'clients', label: t('st.tabClients') },
             ]}
           />
         }
       />
       {items.length === 0 ? (
-        <Empty>Noch keine Query-Log-Daten</Empty>
+        <Empty>{t('st.noLogData')}</Empty>
       ) : (
         <div className="overflow-x-auto px-5 pb-4">
           <table className="w-full text-[13px]">
             <thead>
               <tr className="text-left text-xs text-ink-3">
                 <th className="w-8 py-2 font-medium">#</th>
-                <th className="py-2 font-medium">{tab === 'clients' ? 'Client' : 'Domain'}</th>
-                <th className="hidden py-2 font-medium sm:table-cell">Verlauf</th>
-                <th className="py-2 text-right font-medium">Anfragen</th>
-                <th className="hidden w-28 py-2 pl-4 font-medium md:table-cell">Server</th>
+                <th className="py-2 font-medium">{tab === 'clients' ? t('st.colClient') : t('st.colDomain')}</th>
+                <th className="hidden py-2 font-medium sm:table-cell">{t('st.colTrend')}</th>
+                <th className="py-2 text-right font-medium">{t('st.queries')}</th>
+                <th className="hidden w-28 py-2 pl-4 font-medium md:table-cell">{t('st.colServer')}</th>
               </tr>
             </thead>
             <tbody>
@@ -322,11 +319,11 @@ function TopRow({ e, tab, colors, names }: { e: TopEntry; tab: string; colors: R
         <div className="flex items-center gap-1">
           <span className="tnum text-ink-3">{e.rank}</span>
           {move === 'new' ? (
-            <span className="rounded bg-allowed/20 px-1 text-[9px] font-semibold text-ink uppercase">neu</span>
+            <span className="rounded bg-white/10 px-1 text-[9px] font-semibold text-ink uppercase">{t('st.new')}</span>
           ) : move > 0 ? (
-            <ArrowUp className="size-3 text-ink-2" aria-label={`${move} Plätze hoch`} />
+            <ArrowUp className="size-3 text-ink-2" aria-label={t('st.up', { n: move })} />
           ) : move < 0 ? (
-            <ArrowDown className="size-3 text-ink-3" aria-label={`${-move} Plätze runter`} />
+            <ArrowDown className="size-3 text-ink-3" aria-label={t('st.down', { n: -move })} />
           ) : null}
         </div>
       </td>
@@ -338,7 +335,7 @@ function TopRow({ e, tab, colors, names }: { e: TopEntry; tab: string; colors: R
         ) : (
           e.key
         )}
-        {tab === 'clients' && e.blocked > 0 && <span className="ml-2 text-xs text-ink-3">{fmtPct((e.blocked / e.count) * 100, 0)} geblockt</span>}
+        {tab === 'clients' && e.blocked > 0 && <span className="ml-2 text-xs text-ink-3">{t('st.blockedPct', { v: fmtPct((e.blocked / e.count) * 100, 0) })}</span>}
       </td>
       <td className="hidden py-1 sm:table-cell">
         <Sparkline values={e.trend} color={tab === 'blocked' ? CHART.blocked : CHART.allowed} width={110} height={24} />
@@ -353,22 +350,22 @@ function TopRow({ e, tab, colors, names }: { e: TopEntry; tab: string; colors: R
 
 function exportCsv(d: StatsBundle, names: Record<string, string>) {
   const ids = Object.keys(d.series.queries);
-  const lines = [['Zeit', ...ids.flatMap((id) => [`${names[id] ?? id} Anfragen`, `${names[id] ?? id} geblockt`]), 'Ø Antwortzeit ms'].join(';')];
+  const lines = [[t('csv.time'), ...ids.flatMap((id) => [t('csv.queries', { s: names[id] ?? id }), t('csv.blocked', { s: names[id] ?? id })]), t('csv.avg')].join(';')];
   d.t.forEach((ts, i) => {
     lines.push([new Date(ts).toISOString(), ...ids.flatMap((id) => [d.series.queries[id][i], d.series.blocked[id][i]]), d.series.avgMs[i] ?? ''].join(';'));
   });
-  lines.push('', 'Top-Liste;Rang;Eintrag;Anfragen;geblockt');
+  lines.push('', t('csv.top'));
   for (const [name, list] of [
-    ['Domains', d.topDomains],
-    ['Geblockt', d.topBlocked],
-    ['Clients', d.topClients],
+    [t('st.tabDomains'), d.topDomains],
+    [t('st.tabBlocked'), d.topBlocked],
+    [t('st.tabClients'), d.topClients],
   ] as const) {
     for (const e of list) lines.push([name, e.rank, e.label ? `${e.label} (${e.key})` : e.key, e.count, e.blocked].join(';'));
   }
   const blob = new Blob([`\uFEFF${lines.join('\n')}`], { type: 'text/csv;charset=utf-8' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = `dns-statistik-${d.range}-${new Date().toISOString().slice(0, 10)}.csv`;
+  a.download = `dns-stats-${d.range}-${new Date().toISOString().slice(0, 10)}.csv`;
   a.click();
   URL.revokeObjectURL(a.href);
 }

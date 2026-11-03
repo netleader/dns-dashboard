@@ -7,7 +7,7 @@ export function cx(...c: Array<string | false | null | undefined>) {
 
 export function Card({ children, className, ...rest }: { children: ReactNode; className?: string } & React.HTMLAttributes<HTMLDivElement>) {
   return (
-    <section className={cx('glass fade-up rounded-2xl', className)} {...rest}>
+    <section className={cx('surface fade-up rounded-xl', className)} {...rest}>
       {children}
     </section>
   );
@@ -71,7 +71,7 @@ export function Button({
   ...rest
 }: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: Variant; loading?: boolean; icon?: ReactNode }) {
   const styles: Record<Variant, string> = {
-    primary: 'bg-allowed text-white hover:brightness-110',
+    primary: 'bg-ink text-page hover:bg-white',
     danger: 'bg-critical/90 text-white hover:bg-critical',
     subtle: 'border border-line bg-white/[0.05] text-ink hover:bg-white/[0.09]',
     ghost: 'text-ink-2 hover:bg-white/[0.06] hover:text-ink',

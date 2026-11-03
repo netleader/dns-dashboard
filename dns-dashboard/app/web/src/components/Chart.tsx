@@ -9,13 +9,13 @@ import { fmtAxis } from '../lib/format';
 echarts.use([BarChart, LineChart, HeatmapChart, GridComponent, TooltipComponent, VisualMapComponent, MarkLineComponent, CanvasRenderer]);
 
 export const CHART = {
-  surface: '#121826',
-  grid: '#232a3a',
-  axis: '#2e3648',
-  ink: '#eef1f6',
-  ink2: '#a8b0c0',
-  muted: '#6f788c',
-  allowed: '#3987e5',
+  surface: '#1c1c1c',
+  grid: '#2c2c2c',
+  axis: '#3a3a3a',
+  ink: '#e6e6e6',
+  ink2: '#a3a3a3',
+  muted: '#737373',
+  allowed: '#8e9399',
   blocked: '#d95926',
   font: "'Inter Variable', system-ui, sans-serif",
 };
@@ -28,13 +28,13 @@ export function baseOption(): EChartsCoreOption {
     grid: { left: 8, right: 12, top: 12, bottom: 4, containLabel: true },
     tooltip: {
       trigger: 'axis',
-      backgroundColor: 'rgba(14,19,31,0.96)',
+      backgroundColor: 'rgba(35,35,35,0.97)',
       borderColor: 'rgba(255,255,255,0.1)',
       borderWidth: 1,
       padding: [8, 12],
       textStyle: { color: CHART.ink, fontSize: 12, fontFamily: CHART.font },
       axisPointer: { type: 'line', lineStyle: { color: 'rgba(255,255,255,0.25)', width: 1 } },
-      extraCssText: 'border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.45);backdrop-filter:blur(8px)',
+      extraCssText: 'border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.5)',
     },
   };
 }

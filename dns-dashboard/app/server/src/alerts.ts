@@ -3,10 +3,28 @@ import type { ServerState, SyncState } from './poller.ts';
 
 export type AlertLevel = 'critical' | 'warning' | 'info';
 
+/** Alerts carry a code + params; the frontend turns them into text in the viewer's language. */
+export type AlertCode =
+  | 'api_down'
+  | 'dns_down'
+  | 'dns_slow'
+  | 'paused'
+  | 'protection_off'
+  | 'not_running'
+  | 'slow_processing'
+  | 'update'
+  | 'stale_lists'
+  | 'sync_down'
+  | 'sync_error'
+  | 'drift'
+  | 'version_mismatch';
+
 export interface Alert {
   id: string;
   level: AlertLevel;
-  title: string;
+  code: AlertCode;
+  params?: Record<string, string | number>;
+  /** Raw technical detail (error message, list names) shown as-is. */
   detail?: string;
   server?: string;
 }
@@ -31,62 +49,36 @@ export function updateAvailable(s: ServerState): string | null {
 export function computeAlerts(servers: ServerState[], sync: SyncState, drift: DriftReport, now = Date.now()): Alert[] {
   const alerts: Alert[] = [];
   for (const s of servers) {
-    const { id, name } = s.cfg;
-    if (!s.online) {
-      alerts.push({ id: `${id}-api`, level: 'critical', server: id, title: `${name}: Web-API nicht erreichbar`, detail: s.error });
-    }
+    const id = s.cfg.id;
+    const add = (a: Omit<Alert, 'id' | 'server'>, suffix: string) => alerts.push({ id: `${id}-${suffix}`, server: id, ...a });
+    if (!s.online) add({ level: 'critical', code: 'api_down', detail: s.error }, 'api');
     if (s.dns && !s.dns.ok) {
-      alerts.push({ id: `${id}-dns`, level: 'critical', server: id, title: `${name}: DNS antwortet nicht`, detail: s.dns.error });
+      add({ level: 'critical', code: 'dns_down', detail: s.dns.error }, 'dns');
     } else if (s.dns?.ms !== undefined && s.dns.ms > SLOW_DNS_MS) {
-      alerts.push({ id: `${id}-dns-slow`, level: 'warning', server: id, title: `${name}: DNS-Antwort langsam (${s.dns.ms} ms)` });
+      add({ level: 'warning', code: 'dns_slow', params: { ms: s.dns.ms } }, 'dns-slow');
     }
     if (s.status && !s.status.protection_enabled) {
       const left = s.status.protection_disabled_duration ?? 0;
-      alerts.push(
-        left > 0
-          ? {
-              id: `${id}-paused`,
-              level: 'info',
-              server: id,
-              title: `${name}: Schutz pausiert`,
-              detail: `bis ${new Date(now + left).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}`,
-            }
-          : { id: `${id}-protection`, level: 'warning', server: id, title: `${name}: Schutz ist deaktiviert` },
-      );
+      if (left > 0) add({ level: 'info', code: 'paused', params: { until: now + left } }, 'paused');
+      else add({ level: 'warning', code: 'protection_off' }, 'protection');
     }
-    if (s.status && !s.status.running) {
-      alerts.push({ id: `${id}-running`, level: 'critical', server: id, title: `${name}: DNS-Server läuft nicht` });
-    }
+    if (s.status && !s.status.running) add({ level: 'critical', code: 'not_running' }, 'running');
     const avgMs = (s.stats?.avg_processing_time ?? 0) * 1000;
-    if (avgMs > SLOW_PROCESSING_MS) {
-      alerts.push({
-        id: `${id}-processing`,
-        level: 'warning',
-        server: id,
-        title: `${name}: hohe Verarbeitungszeit (Ø ${Math.round(avgMs)} ms)`,
-      });
-    }
-    if (updateAvailable(s)) {
-      alerts.push({ id: `${id}-update`, level: 'info', server: id, title: `${name}: Update auf ${s.version!.new_version} verfügbar` });
-    }
+    if (avgMs > SLOW_PROCESSING_MS) add({ level: 'warning', code: 'slow_processing', params: { ms: Math.round(avgMs) } }, 'processing');
+    const newVersion = updateAvailable(s);
+    if (newVersion) add({ level: 'info', code: 'update', params: { version: newVersion } }, 'update');
     const interval = s.filtering?.interval ?? 0;
     const stale = [...(s.filtering?.filters ?? []), ...(s.filtering?.whitelist_filters ?? [])].filter(
       (f) => f.enabled && isStale(f.last_updated, interval, now),
     );
     if (stale.length) {
-      alerts.push({
-        id: `${id}-stale`,
-        level: 'warning',
-        server: id,
-        title: `${name}: ${stale.length} Filterliste(n) veraltet`,
-        detail: stale.map((f) => f.name).join(', '),
-      });
+      add({ level: 'warning', code: 'stale_lists', params: { count: stale.length }, detail: stale.map((f) => f.name).join(', ') }, 'stale');
     }
   }
 
   if (sync.configured) {
     if (!sync.reachable) {
-      alerts.push({ id: 'sync-down', level: 'warning', title: 'AdGuard Home Sync nicht erreichbar', detail: sync.error });
+      alerts.push({ id: 'sync-down', level: 'warning', code: 'sync_down', detail: sync.error });
     } else {
       const instances = [sync.status?.origin, ...(sync.status?.replicas ?? [])].filter((i) => i !== undefined);
       for (const inst of instances) {
@@ -94,7 +86,8 @@ export function computeAlerts(servers: ServerState[], sync: SyncState, drift: Dr
           alerts.push({
             id: `sync-${inst.url ?? inst.host}`,
             level: 'warning',
-            title: `Sync-Fehler bei ${inst.host ?? inst.url}`,
+            code: 'sync_error',
+            params: { host: inst.host ?? inst.url ?? '' },
             detail: inst.error,
           });
         }
@@ -108,8 +101,8 @@ export function computeAlerts(servers: ServerState[], sync: SyncState, drift: Dr
     alerts.push({
       id: 'drift',
       level: onlyVersion ? 'info' : 'warning',
-      title: onlyVersion ? 'Unterschiedliche AdGuard-Versionen' : 'Konfiguration der Server weicht ab',
-      detail: differing.map((a) => a.label).join(', '),
+      code: onlyVersion ? 'version_mismatch' : 'drift',
+      params: { areas: differing.map((a) => a.key).join(',') },
     });
   }
 

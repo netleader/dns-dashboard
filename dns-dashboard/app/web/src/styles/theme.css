@@ -1,19 +1,20 @@
 @import 'tailwindcss';
 @import '@fontsource-variable/inter';
 
-/* Dark glass theme. Chart colours are validated for CVD separation against --color-card-solid. */
+/* Neutral dark theme in the style of Home Assistant. Chart colours are validated against --color-card-solid. */
 @theme {
   --font-sans: 'Inter Variable', system-ui, -apple-system, 'Segoe UI', sans-serif;
 
-  --color-page: #070b14;
-  --color-card-solid: #121826;
-  --color-ink: #eef1f6;
-  --color-ink-2: #a8b0c0;
-  --color-ink-3: #6f788c;
+  --color-page: #111111;
+  --color-card-solid: #1c1c1c;
+  --color-ink: #e6e6e6;
+  --color-ink-2: #a3a3a3;
+  --color-ink-3: #737373;
   --color-line: rgb(255 255 255 / 0.08);
-  --color-grid: #232a3a;
+  --color-grid: #2c2c2c;
 
-  --color-allowed: #3987e5;
+  /* Allowed traffic is the quiet baseline (neutral gray); blocked is the one signal colour. */
+  --color-allowed: #8e9399;
   --color-blocked: #d95926;
 
   --color-good: #0ca30c;
@@ -36,22 +37,20 @@ body {
 
 body {
   min-height: 100dvh;
-  background:
-    radial-gradient(60rem 40rem at -10% -20%, rgb(25 158 112 / 0.13), transparent 60%),
-    radial-gradient(50rem 36rem at 110% -10%, rgb(144 133 233 / 0.12), transparent 60%),
-    radial-gradient(40rem 30rem at 50% 120%, rgb(57 135 229 / 0.08), transparent 60%),
-    var(--color-page);
-  background-attachment: fixed;
 }
 
-@utility glass {
-  background: linear-gradient(180deg, rgb(255 255 255 / 0.055), rgb(255 255 255 / 0.03));
+@utility surface {
+  background: var(--color-card-solid);
   border: 1px solid var(--color-line);
-  backdrop-filter: blur(18px) saturate(140%);
-  -webkit-backdrop-filter: blur(18px) saturate(140%);
+}
+
+/* Floating layers (menus, toasts) must stay readable over busy content, so no see-through glass. */
+@utility popover {
+  background: #232323;
+  border: 1px solid rgb(255 255 255 / 0.1);
   box-shadow:
-    0 1px 0 rgb(255 255 255 / 0.04) inset,
-    0 10px 30px -12px rgb(0 0 0 / 0.5);
+    0 1px 0 rgb(255 255 255 / 0.05) inset,
+    0 18px 40px -8px rgb(0 0 0 / 0.7);
 }
 
 @utility tnum {
@@ -59,7 +58,7 @@ body {
 }
 
 ::selection {
-  background: rgb(57 135 229 / 0.35);
+  background: rgb(255 255 255 / 0.2);
 }
 
 * {

@@ -5,8 +5,9 @@ import { CHART } from '../components/Chart';
 import { StackedBars } from '../components/charts';
 import { Card, CardHeader, Empty, Segmented, SeriesKey, Skeleton, cx } from '../components/ui';
 import type { Alert, Overview } from '../lib/api';
-import { fmtCompact, fmtDuration, fmtMs, fmtNum, fmtPct, shortUpstream } from '../lib/format';
+import { fmtCompact, fmtDuration, fmtMs, fmtNum, fmtPct, fmtTime, shortUpstream } from '../lib/format';
 import { useNow } from '../lib/hooks';
+import { type Key, t } from '../lib/i18n';
 
 type TopItem = Overview['combined']['topDomains'][number] & { label?: string };
 
@@ -24,39 +25,39 @@ export function OverviewPage({ o, go }: { o: Overview | null; go: (r: string) =>
 
   return (
     <div className="space-y-5">
-      {o.alerts.length > 0 && <AlertList alerts={o.alerts} />}
+      {o.alerts.length > 0 && <AlertList alerts={o.alerts} servers={o.servers} />}
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <Kpi
           icon={<Globe className="size-4" />}
-          label="DNS-Anfragen · 24 h"
+          label={t('ov.queries24')}
           value={fmtCompact(c.queries)}
           delta={<Delta now={c.queries} prev={c.previous?.queries} />}
           spark={{ values: queries, color: CHART.allowed }}
         />
         <Kpi
           icon={<Ban className="size-4" />}
-          label="Geblockt"
+          label={t('ov.blocked')}
           value={fmtPct(c.blockedPct)}
-          sub={`${fmtNum(c.blocked)} Anfragen`}
+          sub={t('ov.blockedQueries', { n: fmtNum(c.blocked) })}
           delta={<Delta now={c.blockedPct} prev={c.previous?.blockedPct} unit="pp" />}
           spark={{ values: blocked, color: CHART.blocked }}
         />
         <Kpi
           icon={<Clock className="size-4" />}
-          label="Ø Verarbeitungszeit"
+          label={t('ov.avgProcessing')}
           value={fmtMs(c.avgMs)}
           sub={o.servers.map((s) => `${s.name.split(' ')[0]} ${fmtMs(s.stats?.avgMs)}`).join(' · ')}
         />
         <Kpi
           icon={<Users className="size-4" />}
-          label="Aktive Clients"
+          label={t('ov.activeClients')}
           value={fmtNum(c.activeClients)}
-          sub="in den letzten 24 Stunden"
+          sub={t('ov.last24h')}
           footer={
             <div className="mt-3">
               <div className="mb-1.5 flex justify-between text-[11px] text-ink-3">
-                <span>Lastverteilung</span>
+                <span>{t('ov.loadSplit')}</span>
                 <span className="tnum">
                   {o.servers.map((s) => `${fmtPct((100 * (s.stats?.queries ?? 0)) / Math.max(1, c.queries), 0)}`).join(' / ')}
                 </span>
@@ -70,18 +71,18 @@ export function OverviewPage({ o, go }: { o: Overview | null; go: (r: string) =>
       <TrafficCard o={o} colors={colors} names={names} />
 
       <div className="grid gap-5 lg:grid-cols-3">
-        <TopCard title="Top geblockte Domains" icon={<Ban className="size-4" />} items={c.topBlocked} colors={colors} names={names} onSelect={(d) => go(`log?q=${encodeURIComponent(d)}`)} />
-        <TopCard title="Top Domains" icon={<Globe className="size-4" />} items={c.topDomains} colors={colors} names={names} onSelect={(d) => go(`log?q=${encodeURIComponent(d)}`)} />
-        <TopCard title="Top Clients" icon={<Laptop className="size-4" />} items={c.topClients} colors={colors} names={names} onSelect={(d) => go(`log?q=${encodeURIComponent(d)}`)} />
+        <TopCard title={t('ov.topBlocked')} icon={<Ban className="size-4" />} items={c.topBlocked} colors={colors} names={names} onSelect={(d) => go(`log?q=${encodeURIComponent(d)}`)} />
+        <TopCard title={t('ov.topDomains')} icon={<Globe className="size-4" />} items={c.topDomains} colors={colors} names={names} onSelect={(d) => go(`log?q=${encodeURIComponent(d)}`)} />
+        <TopCard title={t('ov.topClients')} icon={<Laptop className="size-4" />} items={c.topClients} colors={colors} names={names} onSelect={(d) => go(`log?q=${encodeURIComponent(d)}`)} />
       </div>
 
       <div className="grid gap-5 lg:grid-cols-5">
         <Card className="lg:col-span-3">
-          <CardHeader title="Server im Vergleich" icon={<Server className="size-4" />} subtitle="Letzte 24 Stunden laut AdGuard Home" />
+          <CardHeader title={t('ov.compare')} icon={<Server className="size-4" />} subtitle={t('ov.compareHint')} />
           <ServerTable o={o} />
         </Card>
         <Card className="lg:col-span-2">
-          <CardHeader title="Upstreams" icon={<Network className="size-4" />} subtitle="Antworten und Ø Antwortzeit, beide Server" />
+          <CardHeader title={t('ov.upstreams')} icon={<Network className="size-4" />} subtitle={t('ov.upstreamsHint')} />
           <UpstreamList items={c.topUpstreams} />
         </Card>
       </div>
@@ -128,16 +129,16 @@ function TrafficCard({ o, colors, names }: { o: Overview; colors: Record<string,
     const q = sum(s.queries);
     const b = sum(s.blocked);
     return [
-      { name: 'Erlaubt', color: CHART.allowed, data: q.map((v, i) => Math.max(0, v - b[i])) },
-      { name: 'Geblockt', color: CHART.blocked, data: b },
+      { name: t('common.allowed'), color: CHART.allowed, data: q.map((v, i) => Math.max(0, v - b[i])) },
+      { name: t('common.blocked'), color: CHART.blocked, data: b },
     ];
   }, [s, mode, colors, names]);
 
   return (
     <Card>
       <CardHeader
-        title="Anfragen im Verlauf"
-        subtitle={s.units === 'hours' ? 'Letzte 24 Stunden, stündlich' : 'Täglich'}
+        title={t('ov.traffic')}
+        subtitle={s.units === 'hours' ? t('ov.last24hHourly') : t('ov.daily')}
         right={
           <>
             <div className="mr-2 hidden gap-3 sm:flex">
@@ -150,15 +151,15 @@ function TrafficCard({ o, colors, names }: { o: Overview; colors: Record<string,
               value={mode}
               onChange={setMode}
               options={[
-                { value: 'status', label: 'Erlaubt / Geblockt' },
-                { value: 'server', label: 'Nach Server' },
+                { value: 'status', label: t('ov.byStatus') },
+                { value: 'server', label: t('ov.byServer') },
               ]}
             />
           </>
         }
       />
       <div className="px-3 pb-3">
-        {s.t.length ? <StackedBars t={s.t} unit={s.units} series={series} height={280} /> : <Empty>Noch keine Daten</Empty>}
+        {s.t.length ? <StackedBars t={s.t} unit={s.units} series={series} height={280} /> : <Empty>{t('common.noData')}</Empty>}
       </div>
     </Card>
   );
@@ -168,14 +169,14 @@ function TopCard({ title, icon, items, colors, names, onSelect }: { title: strin
   const max = Math.max(1, ...items.map((i) => i.count));
   return (
     <Card>
-      <CardHeader title={title} icon={icon} subtitle="beide Server zusammen · Balken = Anteil je Server" />
+      <CardHeader title={title} icon={icon} subtitle={t('ov.topHint')} />
       {items.length === 0 ? (
-        <Empty>Keine Einträge</Empty>
+        <Empty>{t('common.none')}</Empty>
       ) : (
         <ol className="space-y-0.5 px-3 pb-4">
           {items.map((it, i) => (
             <li key={it.name}>
-              <button onClick={() => onSelect(it.name)} className="group w-full rounded-lg px-2 py-1.5 text-left hover:bg-white/[0.04]" title="Im Query-Log anzeigen">
+              <button onClick={() => onSelect(it.name)} className="group w-full rounded-lg px-2 py-1.5 text-left hover:bg-white/[0.04]" title={t('ov.showInLog')}>
                 <div className="flex items-baseline gap-2.5">
                   <span className="tnum w-4 shrink-0 text-right text-[11px] text-ink-3">{i + 1}</span>
                   <span className="min-w-0 flex-1 truncate text-[13px]">
@@ -189,10 +190,14 @@ function TopCard({ title, icon, items, colors, names, onSelect }: { title: strin
                   </span>
                   <span className="tnum shrink-0 text-[13px] font-medium text-ink-2">{fmtNum(it.count)}</span>
                 </div>
-                <div className="mt-1 ml-6.5 flex h-1.5 gap-[2px]" style={{ width: `${Math.max(4, (it.count / max) * 100)}%` }}>
-                  {Object.entries(it.perServer).map(([id, v]) => (
-                    <span key={id} className="h-full rounded-[2px]" style={{ width: `${(v / it.count) * 100}%`, background: colors[id] }} title={`${names[id]}: ${fmtNum(v)}`} />
-                  ))}
+                <div className="mt-1 pl-6.5">
+                  <div className="flex h-1.5 gap-[2px]" style={{ width: `${Math.max(4, (it.count / max) * 100)}%` }}>
+                    {Object.entries(it.perServer)
+                      .filter(([, v]) => v > 0)
+                      .map(([id, v]) => (
+                        <span key={id} className="h-full min-w-[2px] basis-0 rounded-[2px]" style={{ flexGrow: v, background: colors[id] }} title={`${names[id]}: ${fmtNum(v)}`} />
+                      ))}
+                  </div>
                 </div>
               </button>
             </li>
@@ -206,13 +211,13 @@ function TopCard({ title, icon, items, colors, names, onSelect }: { title: strin
 function ServerTable({ o }: { o: Overview }) {
   const now = useNow(30_000);
   const rows: Array<[string, (s: Overview['servers'][number]) => React.ReactNode]> = [
-    ['Anfragen', (s) => fmtNum(s.stats?.queries)],
-    ['Geblockt', (s) => (s.stats ? `${fmtPct(s.stats.blockedPct)} · ${fmtNum(s.stats.blocked)}` : '–')],
-    ['Ø Verarbeitung', (s) => fmtMs(s.stats?.avgMs)],
-    ['DNS-Antwort (Port 53)', (s) => (s.dns?.ok ? fmtMs(s.dns.ms) : <span className="text-critical">keine Antwort</span>)],
-    ['Safe Browsing ersetzt', (s) => fmtNum(s.stats?.safebrowsing)],
-    ['Version', (s) => (s.updateAvailable ? `${s.version} → ${s.updateAvailable}` : (s.version ?? '–'))],
-    ['Läuft seit', (s) => (s.startTime ? fmtDuration(now - s.startTime) : '–')],
+    [t('ov.row.queries'), (s) => fmtNum(s.stats?.queries)],
+    [t('ov.row.blocked'), (s) => (s.stats ? `${fmtPct(s.stats.blockedPct)} · ${fmtNum(s.stats.blocked)}` : '–')],
+    [t('ov.row.processing'), (s) => fmtMs(s.stats?.avgMs)],
+    [t('ov.row.dns'), (s) => (s.dns?.ok ? fmtMs(s.dns.ms) : <span className="text-critical">{t('ov.noAnswer')}</span>)],
+    [t('ov.row.safebrowsing'), (s) => fmtNum(s.stats?.safebrowsing)],
+    [t('ov.row.version'), (s) => (s.updateAvailable ? `${s.version} → ${s.updateAvailable}` : (s.version ?? '–'))],
+    [t('ov.row.uptime'), (s) => (s.startTime ? fmtDuration(now - s.startTime) : '–')],
   ];
   return (
     <div className="overflow-x-auto px-5 pb-4">
@@ -236,7 +241,7 @@ function ServerTable({ o }: { o: Overview }) {
               <td className="py-2 pr-2 text-ink-3">{label}</td>
               {o.servers.map((s) => (
                 <td key={s.id} className="tnum py-2 pl-4 text-ink">
-                  {s.online ? fn(s) : <span className="text-ink-3">offline</span>}
+                  {s.online ? fn(s) : <span className="text-ink-3">{t('common.offline')}</span>}
                 </td>
               ))}
             </tr>
@@ -248,7 +253,7 @@ function ServerTable({ o }: { o: Overview }) {
 }
 
 function UpstreamList({ items }: { items: Overview['combined']['topUpstreams'] }) {
-  if (!items.length) return <Empty>Keine Upstream-Daten</Empty>;
+  if (!items.length) return <Empty>{t('ov.noUpstreams')}</Empty>;
   const max = Math.max(1, ...items.map((u) => u.responses));
   const fastest = Math.min(...items.map((u) => u.avgMs));
   return (
@@ -274,23 +279,38 @@ function UpstreamList({ items }: { items: Overview['combined']['topUpstreams'] }
 }
 
 const ALERT_STYLE = {
-  critical: { icon: AlertOctagon, cls: 'border-critical/45 bg-critical/12', iconCls: 'text-critical', label: 'Kritisch' },
-  warning: { icon: AlertTriangle, cls: 'border-warning/35 bg-warning/10', iconCls: 'text-warning', label: 'Warnung' },
-  info: { icon: Info, cls: 'border-line bg-white/[0.04]', iconCls: 'text-ink-2', label: 'Hinweis' },
+  critical: { icon: AlertOctagon, cls: 'border-critical/45 bg-critical/12', iconCls: 'text-critical' },
+  warning: { icon: AlertTriangle, cls: 'border-warning/35 bg-warning/10', iconCls: 'text-warning' },
+  info: { icon: Info, cls: 'border-line bg-white/[0.04]', iconCls: 'text-ink-2' },
 };
 
-export function AlertList({ alerts }: { alerts: Alert[] }) {
+/** Alerts arrive as code + params; text is built here in the viewer's language. */
+function alertText(a: Alert, servers: Overview['servers']) {
+  const params: Record<string, string | number> = { ...a.params };
+  if (a.code === 'paused' && typeof params.until === 'number') params.until = fmtTime(params.until);
+  const title = t(`alert.${a.code}` as Key, params);
+  const server = servers.find((s) => s.id === a.server)?.name;
+  const areas = typeof a.params?.areas === 'string' ? a.params.areas.split(',').map((k) => t(`drift.${k}` as Key)).join(', ') : undefined;
+  return { title: server ? `${server}: ${title}` : title, detail: a.detail ?? areas };
+}
+
+export function AlertList({ alerts, servers }: { alerts: Alert[]; servers: Overview['servers'] }) {
   return (
     <div className="grid gap-2 md:grid-cols-2">
       {alerts.map((a) => {
         const st = ALERT_STYLE[a.level];
         const Icon = st.icon;
+        const text = alertText(a, servers);
         return (
           <div key={a.id} className={cx('fade-up flex items-start gap-3 rounded-xl border px-4 py-3', st.cls)}>
-            <Icon className={cx('mt-0.5 size-4 shrink-0', st.iconCls)} aria-label={st.label} />
+            <Icon className={cx('mt-0.5 size-4 shrink-0', st.iconCls)} aria-label={t(`alert.level.${a.level}`)} />
             <div className="min-w-0 text-[13px]">
-              <div className="font-medium">{a.title}</div>
-              {a.detail && <div className="mt-0.5 truncate text-xs text-ink-2" title={a.detail}>{a.detail}</div>}
+              <div className="font-medium">{text.title}</div>
+              {text.detail && (
+                <div className="mt-0.5 truncate text-xs text-ink-2" title={text.detail}>
+                  {text.detail}
+                </div>
+              )}
             </div>
           </div>
         );
@@ -304,10 +324,10 @@ function LoadingGrid() {
     <div className="space-y-5">
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         {[0, 1, 2, 3].map((i) => (
-          <Skeleton key={i} className="h-32 rounded-2xl" />
+          <Skeleton key={i} className="h-32 rounded-xl" />
         ))}
       </div>
-      <Skeleton className="h-80 rounded-2xl" />
+      <Skeleton className="h-80 rounded-xl" />
     </div>
   );
 }

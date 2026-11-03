@@ -1,16 +1,17 @@
-import { CheckCircle2, Pause, Play, Search, ShieldBan, ShieldCheck, Undo2 } from 'lucide-react';
+import { CheckCircle2, ChevronDown, Pause, Play, Search, ShieldBan, ShieldCheck, Undo2 } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Drawer, useToast } from '../components/bits';
 import { Badge, Button, Card, Empty, ErrorNote, Segmented, Skeleton, type Tone, cx } from '../components/ui';
 import { type CheckHost, type LogEntry, type Overview, type QueryLogPage, getJson, postJson } from '../lib/api';
-import { PROTOS, REASONS, fmtMs, fmtTime, reasonLabel, shortUpstream } from '../lib/format';
+import { PROTOS, REASONS, fmtFull, fmtMs, fmtTime, listLabel, reasonLabel, shortUpstream } from '../lib/format';
+import { t } from '../lib/i18n';
 
 const STATUS = [
-  { value: 'all', label: 'Alle' },
-  { value: 'blocked', label: 'Geblockt' },
-  { value: 'processed', label: 'Erlaubt' },
-  { value: 'whitelisted', label: 'Allowlist' },
-  { value: 'rewritten', label: 'Umgeschrieben' },
+  { value: 'all', label: t('ql.all') },
+  { value: 'blocked', label: t('common.blocked') },
+  { value: 'processed', label: t('ql.processed') },
+  { value: 'whitelisted', label: t('ql.whitelisted') },
+  { value: 'rewritten', label: t('ql.rewritten') },
   { value: 'blocked_safebrowsing', label: 'Safe Browsing' },
 ];
 
@@ -100,31 +101,34 @@ export function QueryLogPage({ o }: { o: Overview | null }) {
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Domain oder Client-IP suchen"
-            className="w-full rounded-xl border border-line bg-white/[0.04] py-2 pr-3 pl-9 text-[13px] text-ink placeholder:text-ink-3 focus:border-allowed/60 focus:outline-none"
+            placeholder={t('ql.search')}
+            className="w-full rounded-xl border border-line bg-white/[0.04] py-2 pr-3 pl-9 text-[13px] text-ink placeholder:text-ink-3 focus:border-white/30 focus:outline-none"
           />
         </label>
-        <select
-          value={status}
-          onChange={(e) => setStatus(e.target.value)}
-          className="rounded-xl border border-line bg-[#111724] px-3 py-2 text-[13px] text-ink focus:outline-none"
-          aria-label="Status"
-        >
-          {STATUS.map((s) => (
-            <option key={s.value} value={s.value}>
-              {s.label}
-            </option>
-          ))}
-        </select>
-        <Segmented value={server} onChange={setServer} options={[{ value: 'all', label: 'Beide' }, ...servers.map((s) => ({ value: s.id, label: s.name }))]} />
+        <label className="relative">
+          <select
+            value={status}
+            onChange={(e) => setStatus(e.target.value)}
+            className="appearance-none rounded-xl border border-line bg-card-solid py-2 pr-9 pl-3 text-[13px] text-ink focus:border-white/30 focus:outline-none"
+            aria-label={t('ql.status')}
+          >
+            {STATUS.map((s) => (
+              <option key={s.value} value={s.value}>
+                {s.label}
+              </option>
+            ))}
+          </select>
+          <ChevronDown className="pointer-events-none absolute top-1/2 right-3 size-4 -translate-y-1/2 text-ink-3" />
+        </label>
+        <Segmented value={server} onChange={setServer} options={[{ value: 'all', label: t('common.both') }, ...servers.map((s) => ({ value: s.id, label: s.name }))]} />
         <Button onClick={toggleLive} icon={live ? <Pause className="size-4" /> : <Play className="size-4" />} className="ml-auto">
           {live ? (
             <span className="flex items-center gap-2">
               <span className="live-dot size-2 rounded-full bg-good text-good" />
-              Live
+              {t('app.live')}
             </span>
           ) : (
-            'Pausiert'
+            t('ql.paused')
           )}
         </Button>
       </div>
@@ -144,19 +148,19 @@ export function QueryLogPage({ o }: { o: Overview | null }) {
             ))}
           </div>
         ) : entries.length === 0 ? (
-          <Empty>Keine Einträge gefunden</Empty>
+          <Empty>{t('ql.empty')}</Empty>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-[13px]">
               <thead>
                 <tr className="border-b border-line text-left text-xs text-ink-3">
-                  <th className="px-4 py-2.5 font-medium">Zeit</th>
-                  <th className="px-2 py-2.5 font-medium">Server</th>
-                  <th className="px-2 py-2.5 font-medium">Client</th>
-                  <th className="px-2 py-2.5 font-medium">Domain</th>
-                  <th className="px-2 py-2.5 font-medium">Status</th>
-                  <th className="px-2 py-2.5 text-right font-medium">Zeit</th>
-                  <th className="hidden px-4 py-2.5 font-medium lg:table-cell">Antwort von</th>
+                  <th className="px-4 py-2.5 font-medium">{t('ql.colTime')}</th>
+                  <th className="px-2 py-2.5 font-medium">{t('ql.colServer')}</th>
+                  <th className="px-2 py-2.5 font-medium">{t('ql.colClient')}</th>
+                  <th className="px-2 py-2.5 font-medium">{t('ql.colDomain')}</th>
+                  <th className="px-2 py-2.5 font-medium">{t('ql.colStatus')}</th>
+                  <th className="px-2 py-2.5 text-right font-medium">{t('ql.colElapsed')}</th>
+                  <th className="hidden px-4 py-2.5 font-medium lg:table-cell">{t('ql.colAnswer')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -185,7 +189,7 @@ export function QueryLogPage({ o }: { o: Overview | null }) {
                       <Badge tone={toneOf(e.reason)}>{reasonLabel(e.reason)}</Badge>
                     </td>
                     <td className="tnum px-2 py-2 text-right whitespace-nowrap text-ink-2">{fmtMs(e.elapsedMs)}</td>
-                    <td className="hidden max-w-[220px] truncate px-4 py-2 text-ink-3 lg:table-cell">{e.cached ? 'Cache' : e.upstream ? shortUpstream(e.upstream) : '–'}</td>
+                    <td className="hidden max-w-[220px] truncate px-4 py-2 text-ink-3 lg:table-cell">{e.cached ? t('ql.cache') : e.upstream ? shortUpstream(e.upstream) : '–'}</td>
                   </tr>
                 ))}
               </tbody>
@@ -195,7 +199,7 @@ export function QueryLogPage({ o }: { o: Overview | null }) {
         {next && entries && entries.length > 0 && (
           <div className="flex justify-center border-t border-line p-3">
             <Button onClick={loadMore} loading={loadingMore} variant="ghost">
-              Ältere Einträge laden
+              {t('ql.loadMore')}
             </Button>
           </div>
         )}
@@ -226,8 +230,8 @@ function EntryDrawer({ entry, onClose, serverName, originName }: { entry: LogEnt
       const failed = r.results?.find((x) => !x.ok);
       if (failed) toast('critical', `${failed.name}: ${failed.error}`);
       else {
-        const verb = action === 'allow' ? 'freigegeben' : action === 'block' ? 'blockiert' : 'Regel entfernt';
-        toast('good', `${domain} ${verb}${r.synced ? ' · Sync gestartet' : r.syncError ? ` · Sync fehlgeschlagen: ${r.syncError}` : ''}`);
+        const msg = t(action === 'allow' ? 'ql.toast.allowed' : action === 'block' ? 'ql.toast.blocked' : 'ql.toast.removed', { domain });
+        toast('good', `${msg}${r.synced ? t('ql.toast.synced') : r.syncError ? t('ql.toast.syncFailed', { e: r.syncError }) : ''}`);
       }
       setCheck(await getJson<CheckHost>(`api/check-host?name=${encodeURIComponent(domain)}`));
     } catch (err) {
@@ -239,18 +243,18 @@ function EntryDrawer({ entry, onClose, serverName, originName }: { entry: LogEnt
 
   if (!entry) return null;
   const rows: Array<[string, React.ReactNode]> = [
-    ['Zeit', new Date(entry.ts).toLocaleString('de-DE')],
-    ['Server', serverName(entry.server)],
-    ['Client', entry.clientName ? `${entry.clientName} (${entry.client})` : entry.client],
-    ['Typ', entry.qtype],
-    ['Status', <Badge key="s" tone={toneOf(entry.reason)}>{reasonLabel(entry.reason)}</Badge>],
-    ['Antwortcode', entry.rcode || '–'],
-    ['Verarbeitung', fmtMs(entry.elapsedMs)],
-    ['Beantwortet von', entry.cached ? 'DNS-Cache' : entry.upstream || '–'],
-    ['Protokoll', PROTOS[entry.proto] ?? entry.proto],
-    ['DNSSEC', entry.dnssec ? 'validiert' : 'nein'],
+    [t('ql.d.time'), fmtFull(entry.ts)],
+    [t('ql.d.server'), serverName(entry.server)],
+    [t('ql.d.client'), entry.clientName ? `${entry.clientName} (${entry.client})` : entry.client],
+    [t('ql.d.type'), entry.qtype],
+    [t('ql.d.status'), <Badge key="s" tone={toneOf(entry.reason)}>{reasonLabel(entry.reason)}</Badge>],
+    [t('ql.d.rcode'), entry.rcode || '–'],
+    [t('ql.d.elapsed'), fmtMs(entry.elapsedMs)],
+    [t('ql.d.answeredBy'), entry.cached ? t('ql.d.dnsCache') : entry.upstream || '–'],
+    [t('ql.d.protocol'), PROTOS[entry.proto] ?? entry.proto],
+    [t('ql.d.dnssec'), entry.dnssec ? t('ql.d.validated') : t('ql.d.no')],
   ];
-  if (entry.service) rows.push(['Blockierter Dienst', entry.service]);
+  if (entry.service) rows.push([t('ql.d.service'), entry.service]);
 
   return (
     <Drawer open onClose={onClose} title={entry.domain} subtitle={`${entry.qtype} · ${serverName(entry.server)}`}>
@@ -266,11 +270,11 @@ function EntryDrawer({ entry, onClose, serverName, originName }: { entry: LogEnt
 
         {entry.rules.length > 0 && (
           <section>
-            <h4 className="mb-2 text-xs font-semibold tracking-wide text-ink-3 uppercase">Greifende Regel</h4>
+            <h4 className="mb-2 text-xs font-semibold tracking-wide text-ink-3 uppercase">{t('ql.d.rule')}</h4>
             {entry.rules.map((r) => (
               <div key={r.text} className="rounded-xl border border-line bg-white/[0.03] px-3 py-2">
                 <code className="text-[12px] break-all text-ink">{r.text}</code>
-                <div className="mt-1 text-xs text-ink-3">{r.listName ?? `Liste #${r.listId}`}</div>
+                <div className="mt-1 text-xs text-ink-3">{listLabel(r.listName, r.listId)}</div>
               </div>
             ))}
           </section>
@@ -278,7 +282,7 @@ function EntryDrawer({ entry, onClose, serverName, originName }: { entry: LogEnt
 
         {entry.answers.length > 0 && (
           <section>
-            <h4 className="mb-2 text-xs font-semibold tracking-wide text-ink-3 uppercase">Antwort</h4>
+            <h4 className="mb-2 text-xs font-semibold tracking-wide text-ink-3 uppercase">{t('ql.d.answer')}</h4>
             <ul className="space-y-1 text-[12px]">
               {entry.answers.map((a) => (
                 <li key={a}>
@@ -290,7 +294,7 @@ function EntryDrawer({ entry, onClose, serverName, originName }: { entry: LogEnt
         )}
 
         <section>
-          <h4 className="mb-2 text-xs font-semibold tracking-wide text-ink-3 uppercase">Aktueller Stand auf den Servern</h4>
+          <h4 className="mb-2 text-xs font-semibold tracking-wide text-ink-3 uppercase">{t('ql.d.current')}</h4>
           {!check ? (
             <Skeleton className="h-16" />
           ) : (
@@ -306,7 +310,7 @@ function EntryDrawer({ entry, onClose, serverName, originName }: { entry: LogEnt
                         <Badge tone={toneOf(r.reason ?? '')}>{reasonLabel(r.reason ?? '')}</Badge>
                         {r.rules?.map((x) => (
                           <div key={x.text} className="mt-1 text-xs text-ink-3">
-                            <code className="break-all">{x.text}</code> {x.listName && `· ${x.listName}`}
+                            <code className="break-all">{x.text}</code> {x.listName && `· ${listLabel(x.listName)}`}
                           </div>
                         ))}
                       </div>
@@ -319,25 +323,25 @@ function EntryDrawer({ entry, onClose, serverName, originName }: { entry: LogEnt
         </section>
 
         <section className="rounded-xl border border-line bg-white/[0.03] p-4">
-          <h4 className="text-[13px] font-semibold">Eigene Regel für {domain}</h4>
+          <h4 className="text-[13px] font-semibold">{t('ql.d.ownRule', { domain: domain ?? '' })}</h4>
           <p className="mt-1 text-xs text-ink-3">
-            Wird auf dem Origin{originName ? ` (${originName})` : ''} gespeichert und per AdGuard Home Sync verteilt.
-            {check?.userRule === 'allow' && ' Aktuell: freigegeben.'}
-            {check?.userRule === 'block' && ' Aktuell: blockiert.'}
+            {t('ql.d.ownRuleHint', { origin: originName ? ` (${originName})` : '' })}
+            {check?.userRule === 'allow' && t('ql.d.nowAllowed')}
+            {check?.userRule === 'block' && t('ql.d.nowBlocked')}
           </p>
           <div className="mt-3 flex flex-wrap gap-2">
             <Button onClick={() => act('allow')} loading={busy === 'allow'} disabled={!!busy || check?.userRule === 'allow'} icon={<ShieldCheck className="size-4" />}>
-              Freigeben
+              {t('ql.d.allow')}
             </Button>
             <Button onClick={() => act('block')} loading={busy === 'block'} disabled={!!busy || check?.userRule === 'block'} icon={<ShieldBan className="size-4" />}>
-              Blockieren
+              {t('ql.d.block')}
             </Button>
             {check?.userRule && (
               <Button variant="ghost" onClick={() => act('remove')} loading={busy === 'remove'} disabled={!!busy} icon={<Undo2 className="size-4" />}>
-                Regel entfernen
+                {t('ql.d.remove')}
               </Button>
             )}
-            {check && !check.userRule && <span className="flex items-center gap-1 text-xs text-ink-3"><CheckCircle2 className="size-3.5" /> keine eigene Regel</span>}
+            {check && !check.userRule && <span className="flex items-center gap-1 text-xs text-ink-3"><CheckCircle2 className="size-3.5" /> {t('ql.d.noRule')}</span>}
           </div>
         </section>
       </div>

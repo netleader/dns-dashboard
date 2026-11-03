@@ -40,14 +40,17 @@ export function parseTimeUs(time: string): number {
   return base * 1000 + micros;
 }
 
-/** AdGuard's built-in pseudo list ids (internal/filtering/filtering.go). */
+/**
+ * AdGuard's built-in pseudo list ids (internal/filtering/filtering.go).
+ * Names starting with "@" are translated by the frontend.
+ */
 const SPECIAL_LISTS: Array<[number, string]> = [
-  [0, 'Eigene Regeln'],
-  [-1, 'System-Hosts-Datei'],
-  [-2, 'Blockierte Dienste'],
-  [-3, 'Kinderschutz'],
-  [-4, 'Safe Browsing'],
-  [-5, 'SafeSearch'],
+  [0, '@custom'],
+  [-1, '@hosts'],
+  [-2, '@blocked_services'],
+  [-3, '@parental'],
+  [-4, '@safebrowsing'],
+  [-5, '@safesearch'],
 ];
 
 export function filterListNames(f: AgFilterStatus | undefined): Map<number, string> {
