@@ -1,5 +1,5 @@
 name: DNS Dashboard
-version: "0.1.1"
+version: "0.1.2"
 slug: dns_dashboard
 url: https://github.com/netleader/dns-dashboard
 description: One dashboard for two AdGuard Home servers – status, statistics, query log, sync and actions.
