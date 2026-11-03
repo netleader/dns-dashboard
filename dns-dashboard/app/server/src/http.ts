@@ -36,7 +36,7 @@ export async function request<T>(
 
 export function errorMessage(err: unknown): string {
   if (err instanceof Error) {
-    if (err.name === 'TimeoutError') return 'Zeitüberschreitung';
+    if (err.name === 'TimeoutError') return 'Timeout';
     const cause = (err as { cause?: { code?: string } }).cause;
     if (cause?.code) return `${err.message} (${cause.code})`;
     return err.message;

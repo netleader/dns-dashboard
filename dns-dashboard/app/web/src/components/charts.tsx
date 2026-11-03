@@ -1,6 +1,7 @@
 import type { EChartsCoreOption } from 'echarts/core';
 import { useMemo } from 'react';
 import { fmtBucket, fmtBucketLong, fmtMs, fmtNum, fmtPct } from '../lib/format';
+import { t as tr } from '../lib/i18n';
 import { CHART, Chart, baseOption, categoryAxis, tipRow, valueAxis } from './Chart';
 
 export interface Series {
@@ -22,7 +23,7 @@ export function StackedBars({ t, unit, series, height = 260 }: { t: number[]; un
         formatter: (params: Array<{ dataIndex: number; seriesIndex: number; value: number }>) => {
           const i = params[0]?.dataIndex ?? 0;
           const rows = [...params].reverse().map((p) => tipRow(series[p.seriesIndex].color, series[p.seriesIndex].name, fmtNum(p.value)));
-          return `<div style="margin-bottom:6px;font-weight:600">${fmtBucketLong(t[i], unit)}</div>${rows.join('')}<div style="margin-top:6px;border-top:1px solid rgba(255,255,255,.08);padding-top:6px">${tipRow('transparent', 'Gesamt', fmtNum(total[i]))}</div>`;
+          return `<div style="margin-bottom:6px;font-weight:600">${fmtBucketLong(t[i], unit)}</div>${rows.join('')}<div style="margin-top:6px;border-top:1px solid rgba(255,255,255,.08);padding-top:6px">${tipRow('transparent', tr('common.total'), fmtNum(total[i]))}</div>`;
         },
       },
       xAxis: categoryAxis(t.map((x) => fmtBucket(x, unit))),
@@ -99,9 +100,9 @@ export function Lines({
   return <Chart option={option} height={height} />;
 }
 
-const DAYS = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
+const DAYS = tr('days.short').split(',');
 
-/** Weekday × hour heatmap with a single-hue sequential ramp (dark = little, light = a lot). */
+/** Weekday × hour heatmap with a neutral sequential ramp (dark = little, light = a lot). */
 export function Heatmap({ values, height = 250, percent = false }: { values: number[][]; height?: number; percent?: boolean }) {
   const option = useMemo<EChartsCoreOption>(() => {
     const data: Array<[number, number, number]> = [];
@@ -121,7 +122,7 @@ export function Heatmap({ values, height = 250, percent = false }: { values: num
         formatter: (p: { value: [number, number, number] }) =>
           `<div style="font-weight:600;margin-bottom:4px">${DAYS[p.value[1]]}, ${String(p.value[0]).padStart(2, '0')}:00–${String(p.value[0] + 1).padStart(2, '0')}:00</div>${tipRow(
             'transparent',
-            percent ? 'Block-Rate' : 'Ø Anfragen / Std.',
+            percent ? tr('chart.blockRate') : tr('chart.avgPerHour'),
             percent ? fmtPct(p.value[2]) : fmtNum(p.value[2]),
           )}`,
       },
@@ -145,7 +146,7 @@ export function Heatmap({ values, height = 250, percent = false }: { values: num
         show: false,
         min: 0,
         max: Math.max(1, max),
-        inRange: { color: ['#16233a', '#104281', '#1c5cab', '#2a78d6', '#5598e7', '#9ec5f4'] },
+        inRange: { color: ['#262626', '#3a3a3a', '#555555', '#787878', '#a3a3a3', '#d6d6d6'] },
       },
       series: [
         {

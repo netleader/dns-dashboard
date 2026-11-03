@@ -279,7 +279,7 @@ export class StatsQueries {
       .all(w.from, w.to, ...s.params) as unknown as Array<{ server: string; key: string; count: number }>;
     const lists = new Map<string, number>();
     for (const r of listRows) {
-      const name = ctx.listNames.get(r.server)?.get(Number(r.key)) ?? `Liste #${r.key}`;
+      const name = ctx.listNames.get(r.server)?.get(Number(r.key)) ?? `#${r.key}`;
       lists.set(name, (lists.get(name) ?? 0) + r.count);
     }
 

@@ -1,6 +1,7 @@
 import { ArrowDown, ArrowUp, Minus, X } from 'lucide-react';
 import { type ReactNode, createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { fmtNum, fmtPct } from '../lib/format';
+import { t } from '../lib/i18n';
 import { cx } from './ui';
 
 /** 12–48 point trend line; the latest point is marked. */
@@ -22,7 +23,7 @@ export function Sparkline({ values, color = '#6f788c', width = 96, height = 28, 
     >
       <polyline points={`0,${height} ${pts} ${width},${height}`} fill={color} opacity={0.08} />
       <polyline points={pts} fill="none" stroke={color} strokeWidth={1.5} strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
-      {!stretch && <circle cx={last * step} cy={y(values[last])} r={3} fill={color} stroke="#121826" strokeWidth={2} />}
+      {!stretch && <circle cx={last * step} cy={y(values[last])} r={3} fill={color} stroke="#1c1c1c" strokeWidth={2} />}
     </svg>
   );
 }
@@ -31,7 +32,7 @@ export function Sparkline({ values, color = '#6f788c', width = 96, height = 28, 
  * Signed change vs. a named period. `goodWhenUp` decides the colour: more queries is neutral,
  * a higher block rate is neither good nor bad, a faster answer is good.
  */
-export function Delta({ now, prev, unit = 'pct', goodWhenUp, label = 'Vortag' }: { now: number; prev: number | null | undefined; unit?: 'pct' | 'pp'; goodWhenUp?: boolean; label?: string }) {
+export function Delta({ now, prev, unit = 'pct', goodWhenUp, label = t('period.24h') }: { now: number; prev: number | null | undefined; unit?: 'pct' | 'pp'; goodWhenUp?: boolean; label?: string }) {
   if (prev === null || prev === undefined || (unit === 'pct' && prev === 0)) return null;
   const diff = unit === 'pct' ? ((now - prev) / prev) * 100 : now - prev;
   const flat = Math.abs(diff) < 0.5;
@@ -41,8 +42,8 @@ export function Delta({ now, prev, unit = 'pct', goodWhenUp, label = 'Vortag' }:
   return (
     <span className={cx('inline-flex items-center gap-0.5 text-xs font-medium', tone)}>
       <Icon className="size-3.5" />
-      {unit === 'pct' ? fmtPct(Math.abs(diff), 0) : `${Math.abs(diff).toLocaleString('de-DE', { maximumFractionDigits: 1 })} Pp.`}
-      <span className="ml-1 font-normal text-ink-3">ggü. {label}</span>
+      {unit === 'pct' ? fmtPct(Math.abs(diff), 0) : t('common.pp', { v: fmtNum(Math.round(Math.abs(diff) * 10) / 10) })}
+      <span className="ml-1 font-normal text-ink-3">{t('common.vs', { period: label })}</span>
     </span>
   );
 }
@@ -50,7 +51,7 @@ export function Delta({ now, prev, unit = 'pct', goodWhenUp, label = 'Vortag' }:
 /** Horizontal magnitude bars – one hue, value at the tip. */
 export function BarList({
   items,
-  color = '#3987e5',
+  color = '#8e9399',
   colorOf,
   format = fmtNum,
   label = (k) => k,
@@ -104,7 +105,7 @@ export function SplitBar({ parts, className }: { parts: Array<{ color: string; v
       {parts
         .filter((p) => p.value > 0)
         .map((p) => (
-          <span key={p.label} style={{ width: `${(p.value / total) * 100}%`, background: p.color }} />
+          <span key={p.label} className="min-w-[2px] basis-0" style={{ flexGrow: p.value, background: p.color }} />
         ))}
     </div>
   );
@@ -120,14 +121,14 @@ export function Drawer({ open, onClose, title, subtitle, children }: { open: boo
   if (!open) return null;
   return (
     <div className="fixed inset-0 z-50 flex justify-end">
-      <button aria-label="Schließen" className="absolute inset-0 bg-black/50 backdrop-blur-[2px]" onClick={onClose} />
-      <aside className="relative flex h-full w-full max-w-xl flex-col border-l border-line bg-[#0c111c]/95 shadow-2xl backdrop-blur-xl" style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
+      <button aria-label={t('common.close')} className="absolute inset-0 bg-black/50 backdrop-blur-[2px]" onClick={onClose} />
+      <aside className="relative flex h-full w-full max-w-xl flex-col border-l border-line bg-[#181818] shadow-2xl" style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
         <header className="flex items-start justify-between gap-3 border-b border-line px-5 py-4">
           <div className="min-w-0">
             <h3 className="truncate text-base font-semibold">{title}</h3>
             {subtitle && <p className="mt-0.5 text-xs text-ink-3">{subtitle}</p>}
           </div>
-          <button onClick={onClose} className="rounded-lg p-1.5 text-ink-3 hover:bg-white/[0.06] hover:text-ink" aria-label="Schließen">
+          <button onClick={onClose} className="rounded-lg p-1.5 text-ink-3 hover:bg-white/[0.06] hover:text-ink" aria-label={t('common.close')}>
             <X className="size-5" />
           </button>
         </header>
@@ -158,7 +159,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       {children}
       <div className="pointer-events-none fixed right-4 bottom-4 z-[60] flex flex-col gap-2" style={{ marginBottom: 'env(safe-area-inset-bottom, 0px)' }}>
         {toasts.map((t) => (
-          <div key={t.id} className="glass fade-up pointer-events-auto flex max-w-sm items-start gap-2 rounded-xl bg-[#0c111c]/90 px-4 py-3 text-sm">
+          <div key={t.id} className="popover fade-up pointer-events-auto flex max-w-sm items-start gap-2 rounded-xl px-4 py-3 text-sm">
             <span className={cx('mt-1.5 size-2 shrink-0 rounded-full', t.tone === 'good' ? 'bg-good' : t.tone === 'critical' ? 'bg-critical' : 'bg-ink-3')} />
             {t.text}
           </div>

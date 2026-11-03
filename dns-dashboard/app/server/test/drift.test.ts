@@ -47,7 +47,7 @@ test('alerts flag offline servers before drift', () => {
   const alerts = computeAlerts(
     [server('dns1', { online: false, error: 'timeout' }), server('dns2', {})],
     { configured: false, reachable: false },
-    { checkedAt: 0, differences: 1, areas: [{ key: 'clients', label: 'Clients', status: 'differs', onlyIn: {}, changed: ['x'] }] },
+    { checkedAt: 0, differences: 1, areas: [{ key: 'clients', status: 'differs', onlyIn: {}, changed: ['x'] }] },
   );
   assert.deepEqual(
     alerts.map((a) => [a.level, a.id]),

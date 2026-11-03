@@ -7,12 +7,10 @@ import { Card, CardHeader, Empty, ErrorNote, Segmented, SeriesKey, Skeleton } fr
 import type { ClientDetail, ClientRow, Overview, RangeKey } from '../lib/api';
 import { fmtAgo, fmtDateTime, fmtNum, fmtPct } from '../lib/format';
 import { useApi } from '../lib/hooks';
+import { t, tMaybe } from '../lib/i18n';
 
-const RANGES: Array<{ value: RangeKey; label: string }> = [
-  { value: '24h', label: '24 h' },
-  { value: '7d', label: '7 Tage' },
-  { value: '30d', label: '30 Tage' },
-];
+const RANGES = (['24h', '7d', '30d'] as const).map((value) => ({ value: value as RangeKey, label: t(`range.${value}`) }));
+const sourceLabel = (s: string) => tMaybe(`cl.source.${s}`, s);
 
 export function ClientsPage({ o }: { o: Overview | null }) {
   const [range, setRange] = useState<RangeKey>('24h');
@@ -39,12 +37,12 @@ export function ClientsPage({ o }: { o: Overview | null }) {
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Name, IP, Tag suchen"
-            className="w-full rounded-xl border border-line bg-white/[0.04] py-2 pr-3 pl-9 text-[13px] placeholder:text-ink-3 focus:border-allowed/60 focus:outline-none"
+            placeholder={t('cl.search')}
+            className="w-full rounded-xl border border-line bg-white/[0.04] py-2 pr-3 pl-9 text-[13px] placeholder:text-ink-3 focus:border-white/30 focus:outline-none"
           />
         </label>
         <Segmented value={range} onChange={setRange} options={RANGES} />
-        {data && <span className="ml-auto text-xs text-ink-3">{active} aktiv · {data.clients.length} bekannt</span>}
+        {data && <span className="ml-auto text-xs text-ink-3">{t('cl.counts', { active, known: data.clients.length })}</span>}
       </div>
       {error && <ErrorNote>{error}</ErrorNote>}
 
@@ -56,18 +54,18 @@ export function ClientsPage({ o }: { o: Overview | null }) {
             ))}
           </div>
         ) : rows.length === 0 ? (
-          <Empty>Keine Clients gefunden</Empty>
+          <Empty>{t('cl.empty')}</Empty>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-[13px]">
               <thead>
                 <tr className="border-b border-line text-left text-xs text-ink-3">
-                  <th className="px-4 py-2.5 font-medium">Client</th>
-                  <th className="hidden px-2 py-2.5 font-medium md:table-cell">Quelle</th>
-                  <th className="px-2 py-2.5 font-medium">Anfragen</th>
-                  <th className="px-2 py-2.5 text-right font-medium">Geblockt</th>
-                  <th className="hidden w-32 px-4 py-2.5 font-medium sm:table-cell">Server</th>
-                  <th className="hidden px-4 py-2.5 text-right font-medium lg:table-cell">Zuletzt</th>
+                  <th className="px-4 py-2.5 font-medium">{t('cl.colClient')}</th>
+                  <th className="hidden px-2 py-2.5 font-medium md:table-cell">{t('cl.colSource')}</th>
+                  <th className="px-2 py-2.5 font-medium">{t('cl.colQueries')}</th>
+                  <th className="px-2 py-2.5 text-right font-medium">{t('cl.colBlocked')}</th>
+                  <th className="hidden w-32 px-4 py-2.5 font-medium sm:table-cell">{t('cl.colServer')}</th>
+                  <th className="hidden px-4 py-2.5 text-right font-medium lg:table-cell">{t('cl.colLast')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -80,7 +78,7 @@ export function ClientsPage({ o }: { o: Overview | null }) {
                         {c.tags.length > 0 && ` · ${c.tags.join(', ')}`}
                       </div>
                     </td>
-                    <td className="hidden px-2 py-2.5 text-ink-3 md:table-cell">{c.source}</td>
+                    <td className="hidden px-2 py-2.5 text-ink-3 md:table-cell">{sourceLabel(c.source)}</td>
                     <td className="px-2 py-2.5">
                       <div className="flex items-center gap-2">
                         <span className="tnum w-14 shrink-0 text-right">{fmtNum(c.count)}</span>
@@ -113,14 +111,14 @@ function ClientDrawer({ client, range, onClose, colors, names }: { client: Clien
     () =>
       data
         ? [
-            { name: 'Erlaubt', color: CHART.allowed, data: data.queries.map((q, i) => q - data.blocked[i]) },
-            { name: 'Geblockt', color: CHART.blocked, data: data.blocked },
+            { name: t('common.allowed'), color: CHART.allowed, data: data.queries.map((q, i) => q - data.blocked[i]) },
+            { name: t('common.blocked'), color: CHART.blocked, data: data.blocked },
           ]
         : [],
     [data],
   );
   return (
-    <Drawer open onClose={onClose} title={client.name ?? client.key} subtitle={`${client.ids.join(', ')} · ${client.source}`}>
+    <Drawer open onClose={onClose} title={client.name ?? client.key} subtitle={`${client.ids.join(', ')} · ${sourceLabel(client.source)}`}>
       {!data ? (
         <div className="space-y-3 p-5">
           <Skeleton className="h-48" />
@@ -129,27 +127,27 @@ function ClientDrawer({ client, range, onClose, colors, names }: { client: Clien
       ) : (
         <div className="space-y-2 pb-6">
           <div className="grid grid-cols-3 gap-3 px-5 pt-5">
-            <Stat label="Anfragen" value={fmtNum(client.count)} />
-            <Stat label="Geblockt" value={client.count ? fmtPct((client.blocked / client.count) * 100) : '–'} />
-            <Stat label="Zuletzt aktiv" value={client.lastSeen ? fmtAgo(client.lastSeen) : '–'} />
+            <Stat label={t('cl.colQueries')} value={fmtNum(client.count)} />
+            <Stat label={t('cl.colBlocked')} value={client.count ? fmtPct((client.blocked / client.count) * 100) : '–'} />
+            <Stat label={t('cl.lastActive')} value={client.lastSeen ? fmtAgo(client.lastSeen) : '–'} />
           </div>
           <CardHeader
-            title="Verlauf"
-            subtitle={data.rawFrom ? `Detaildaten seit ${fmtDateTime(data.rawFrom)}` : undefined}
+            title={t('cl.history')}
+            subtitle={data.rawFrom ? t('cl.detailSince', { from: fmtDateTime(data.rawFrom) }) : undefined}
             right={series.map((s) => <SeriesKey key={s.name} color={s.color} label={s.name} />)}
           />
-          <div className="px-3">{data.queries.some(Boolean) ? <StackedBars t={data.t} unit={data.unit} series={series} height={190} /> : <Empty>Keine Detaildaten im Zeitraum</Empty>}</div>
+          <div className="px-3">{data.queries.some(Boolean) ? <StackedBars t={data.t} unit={data.unit} series={series} height={190} /> : <Empty>{t('cl.noDetail')}</Empty>}</div>
           {data.servers.length > 0 && (
             <>
-              <CardHeader title="Genutzte Server" />
+              <CardHeader title={t('cl.servers')} />
               <BarList items={data.servers} label={(k) => names[k] ?? k} color={colors[data.servers[0].key]} />
             </>
           )}
-          <CardHeader title="Top Domains" />
+          <CardHeader title={t('cl.topDomains')} />
           {data.topDomains.length ? <BarList items={data.topDomains} /> : <Empty>–</Empty>}
-          <CardHeader title="Top geblockt" />
-          {data.topBlocked.length ? <BarList items={data.topBlocked} color={CHART.blocked} /> : <Empty>Nichts geblockt</Empty>}
-          <CardHeader title="Anfragetypen" />
+          <CardHeader title={t('cl.topBlocked')} />
+          {data.topBlocked.length ? <BarList items={data.topBlocked} color={CHART.blocked} /> : <Empty>{t('cl.nothingBlocked')}</Empty>}
+          <CardHeader title={t('cl.qtypes')} />
           <BarList items={data.qtypes} />
         </div>
       )}

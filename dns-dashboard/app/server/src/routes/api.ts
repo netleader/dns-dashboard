@@ -144,7 +144,7 @@ export async function registerApi(app: FastifyInstance, d: Deps) {
     for (const s of poller.servers) {
       for (const c of s.clients?.clients ?? []) {
         if (configuredByName.has(c.name)) continue;
-        const row: Row = { key: c.name, name: c.name, source: 'Konfiguriert', ids: c.ids ?? [], tags: c.tags ?? [], count: 0, blocked: 0, perServer: {}, lastSeen: null };
+        const row: Row = { key: c.name, name: c.name, source: 'configured', ids: c.ids ?? [], tags: c.tags ?? [], count: 0, blocked: 0, perServer: {}, lastSeen: null };
         configuredByName.set(c.name, row);
         rows.set(`cfg:${c.name}`, row);
       }
@@ -162,7 +162,7 @@ export async function registerApi(app: FastifyInstance, d: Deps) {
     for (const a of activity) {
       let row = byId.get(a.key);
       if (!row) {
-        row = { key: a.key, name: name(a.key), source: 'Query-Log', ids: [a.key], tags: [], count: 0, blocked: 0, perServer: {}, lastSeen: null };
+        row = { key: a.key, name: name(a.key), source: 'querylog', ids: [a.key], tags: [], count: 0, blocked: 0, perServer: {}, lastSeen: null };
         rows.set(a.key, row);
         byId.set(a.key, row);
       }
@@ -250,7 +250,7 @@ export async function registerApi(app: FastifyInstance, d: Deps) {
 
   app.get<{ Querystring: { name?: string } }>('/api/check-host', async (req, reply) => {
     const name = (req.query.name ?? '').trim().toLowerCase();
-    if (!DOMAIN_RE.test(name)) return reply.code(400).send({ error: 'Ungültige Domain' });
+    if (!DOMAIN_RE.test(name)) return reply.code(400).send({ error: 'Invalid domain' });
     const origin = poller.server(poller.originId())!;
     const rules = origin.filtering?.user_rules ?? [];
     const results = await Promise.all(
@@ -282,7 +282,7 @@ export async function registerApi(app: FastifyInstance, d: Deps) {
     const enabled = req.body?.enabled === true;
     const durationMs = Number(req.body?.durationMs) || undefined;
     if (durationMs !== undefined && (durationMs < 1000 || durationMs > 24 * 3600_000)) {
-      return reply.code(400).send({ error: 'Ungültige Dauer' });
+      return reply.code(400).send({ error: 'Invalid duration' });
     }
     const results = await onServers(poller.servers, (s) => s.client.setProtection(enabled, durationMs));
     return finish(reply, { results });
@@ -309,7 +309,7 @@ export async function registerApi(app: FastifyInstance, d: Deps) {
     const domain = (req.body?.domain ?? '').trim().toLowerCase().replace(/\.$/, '');
     const action = req.body?.action;
     if (!DOMAIN_RE.test(domain) || !['block', 'allow', 'remove'].includes(action ?? '')) {
-      return reply.code(400).send({ error: 'Ungültige Domain oder Aktion' });
+      return reply.code(400).send({ error: 'Invalid domain or action' });
     }
     const apply = async (s: ServerState) => {
       const current = (await s.client.filteringStatus()).user_rules ?? [];
