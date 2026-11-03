@@ -22,28 +22,33 @@ reason='Only the user may set or remove the "approved" label (ticket approval ga
 
 has() { grep -qiE -- "$1" <<<"$cmd"; }
 
-# gh issue/pr edit|create with a label flag in a command that mentions "approved"
-if has 'gh[[:space:]]+(issue|pr)[[:space:]]+(edit|create)' &&
-   has '(--add-label|--remove-label|--label|[[:space:]]-l)([[:space:]=]|$)' &&
-   has 'approved'; then
+# Rules match only where a command starts (line start or after ; & | ( `),
+# so text in PR bodies, heredocs or comments does not trigger them.
+start='(^|[;&|(`])[[:space:]]*'
+label_flag='(--add-label|--remove-label|--label|-l)[[:space:]=]+'
+
+# gh issue/pr edit|create setting or removing "approved" (also via a $variable)
+if has "${start}gh[[:space:]]+(issue|pr)[[:space:]]+(edit|create)[^;&|]*${label_flag}[^[:space:]]*approved" ||
+   { has "${start}gh[[:space:]]+(issue|pr)[[:space:]]+(edit|create)[^;&|]*${label_flag}[\"']?\\$" &&
+     has 'approved'; }; then
   deny "$reason"
 fi
 
-# gh label create/edit/delete/clone touching "approved"
-if has 'gh[[:space:]]+label' && has 'approved'; then
+# gh label create/edit/delete/clone on "approved"
+if has "${start}gh[[:space:]]+label[[:space:]]+(create|edit|delete|clone)[^;&|]*approved"; then
   deny "$reason"
 fi
 
 # gh api writes that involve labels (REST label endpoints or GraphQL label mutations)
-if has 'gh[[:space:]]+api' && has 'label'; then
-  if has '(-X|--method)[[:space:]=]*(POST|PUT|PATCH|DELETE)' ||
-     has '(^|[[:space:]])(-f|-F|--field|--raw-field|--input)([[:space:]=]|$)'; then
+if has "${start}gh[[:space:]]+api[^;&|]*label"; then
+  if has "${start}gh[[:space:]]+api[^;&|]*(-X|--method)[[:space:]=]*(POST|PUT|PATCH|DELETE)" ||
+     has "${start}gh[[:space:]]+api[^;&|]*[[:space:]](-f|-F|--field|--raw-field|--input)([[:space:]=]|$)"; then
     deny "$reason Use 'gh issue view N --json labels' to read labels."
   fi
 fi
 
 # direct HTTP calls to the GitHub API involving labels
-if has '(curl|wget|http|https|xh)[[:space:]]' && has 'api\.github\.com' && has 'label'; then
+if has "${start}(curl|wget|http|https|xh)[[:space:]][^;&|]*api\.github\.com[^;&|]*label"; then
   deny "$reason"
 fi
 
