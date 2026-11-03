@@ -10,12 +10,12 @@ const CLIENTS = [
   ['192.168.10.21', 'iPhone'],
   ['192.168.10.22', 'iPad'],
   ['192.168.10.23', 'Apple-TV'],
-  ['192.168.10.24', 'HomePod-Küche'],
-  ['192.168.10.30', 'Sonos-Wohnzimmer'],
+  ['192.168.10.24', 'HomePod-Kitchen'],
+  ['192.168.10.30', 'Sonos-Living-Room'],
   ['192.168.10.31', 'Fire-TV'],
   ['192.168.10.40', 'Shelly-Plug-1'],
   ['192.168.10.41', 'Shelly-Plug-2'],
-  ['192.168.10.50', 'Drucker'],
+  ['192.168.10.50', 'Printer'],
   ['192.168.10.60', 'NAS'],
   ['192.168.10.61', 'Windows-PC'],
   ['192.168.10.70', 'Pixel'],
@@ -250,8 +250,8 @@ class MockAdGuard {
       case 'GET /control/clients':
         return {
           clients: [
-            { name: 'Kinder-iPad', ids: ['192.168.10.22'], tags: ['user_child'], use_global_settings: false, filtering_enabled: true, parental_enabled: true, safebrowsing_enabled: true },
-            { name: 'Wohnzimmer-TV', ids: ['192.168.10.23', '192.168.10.31'], tags: ['device_tv'], use_global_settings: true },
+            { name: 'Kids-iPad', ids: ['192.168.10.22'], tags: ['user_child'], use_global_settings: false, filtering_enabled: true, parental_enabled: true, safebrowsing_enabled: true },
+            { name: 'Living-Room-TV', ids: ['192.168.10.23', '192.168.10.31'], tags: ['device_tv'], use_global_settings: true },
           ],
           auto_clients: CLIENTS.map(([ip, name]) => ({ ip, name, source: 'rDNS' })),
         };

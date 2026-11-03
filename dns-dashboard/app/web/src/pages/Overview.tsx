@@ -264,7 +264,7 @@ function UpstreamList({ items }: { items: Overview['combined']['topUpstreams'] }
             <span className="min-w-0 truncate" title={u.name}>
               {shortUpstream(u.name)}
             </span>
-            <span className={cx('tnum shrink-0 text-xs', u.avgMs === fastest ? 'text-good' : 'text-ink-3')}>Ø {fmtMs(u.avgMs)}</span>
+            <span className={cx('tnum shrink-0 text-xs', u.avgMs === fastest ? 'text-good' : 'text-ink-3')}>{t('common.avg', { v: fmtMs(u.avgMs) })}</span>
           </div>
           <div className="mt-1.5 flex items-center gap-2">
             <div className="h-1.5 flex-1 rounded-full bg-white/[0.05]">
