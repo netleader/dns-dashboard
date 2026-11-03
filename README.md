@@ -1,5 +1,7 @@
 # dns-dashboard
 
+![Version](https://img.shields.io/badge/dynamic/yaml?url=https%3A%2F%2Fraw.githubusercontent.com%2Fnetleader%2Fdns-dashboard%2Fmain%2Fdns-dashboard%2Fconfig.yaml&query=%24.version&label=version)
+
 A Home Assistant app that brings two AdGuard Home servers (plus AdGuard Home Sync) together in one dashboard: status, statistics with its own long-term history, a merged query log, clients, a configuration comparison, and actions on both servers.
 
 Installation and usage: [dns-dashboard/DOCS.md](dns-dashboard/DOCS.md)
