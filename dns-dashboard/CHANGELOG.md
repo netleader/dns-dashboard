@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Invalid numeric environment options (e.g. POLL_INTERVAL=abc) stop the start with a clear error instead of running with NaN
+
 ## 0.1.2
 
 - Documentation, changelog and app description in English
