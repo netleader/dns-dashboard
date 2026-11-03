@@ -54,6 +54,15 @@ interface HaOptions {
 
 const blank = (v: string | undefined) => (v && v.trim() !== '' ? v.trim() : undefined);
 
+/** Parses a numeric environment variable: unset or empty means "use the default", anything else must be finite. */
+function envNumber(name: string): number | undefined {
+  const raw = process.env[name];
+  if (raw === undefined || raw.trim() === '') return undefined;
+  const value = Number(raw);
+  if (!Number.isFinite(value)) throw new Error(`Invalid number for ${name}: "${raw}"`);
+  return value;
+}
+
 function fromEnv(): HaOptions {
   const env = process.env;
   const servers: NonNullable<HaOptions['servers']> = [];
@@ -69,19 +78,18 @@ function fromEnv(): HaOptions {
       dns_address: env[`DNS${n}_DNS_ADDRESS`],
     });
   }
-  const num = (v: string | undefined) => (v ? Number(v) : undefined);
   return {
     servers,
     sync_url: env.SYNC_URL,
     sync_username: env.SYNC_USER,
     sync_password: env.SYNC_PASS,
     origin: env.ORIGIN,
-    poll_interval: num(env.POLL_INTERVAL),
-    querylog_poll_interval: num(env.QUERYLOG_POLL_INTERVAL),
-    history_raw_days: num(env.HISTORY_RAW_DAYS),
-    history_hourly_days: num(env.HISTORY_HOURLY_DAYS),
+    poll_interval: envNumber('POLL_INTERVAL'),
+    querylog_poll_interval: envNumber('QUERYLOG_POLL_INTERVAL'),
+    history_raw_days: envNumber('HISTORY_RAW_DAYS'),
+    history_hourly_days: envNumber('HISTORY_HOURLY_DAYS'),
     dns_probe_domain: env.DNS_PROBE_DOMAIN,
-    dns_probe_interval: num(env.DNS_PROBE_INTERVAL),
+    dns_probe_interval: envNumber('DNS_PROBE_INTERVAL'),
   };
 }
 
@@ -119,7 +127,7 @@ export function loadConfig(): AppConfig {
     dnsProbeDomain: blank(o.dns_probe_domain) ?? 'example.com',
     dnsProbeInterval: Math.max(10, o.dns_probe_interval ?? 60),
     dataDir: process.env.DATA_DIR ?? (inHa ? '/data' : './.data'),
-    port: Number(process.env.PORT ?? 8099),
+    port: envNumber('PORT') ?? 8099,
     ingressOnly: inHa && process.env.INGRESS_ONLY !== 'false',
   };
 }
