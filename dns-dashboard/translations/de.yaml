@@ -1,0 +1,35 @@
+configuration:
+  servers:
+    name: AdGuard-Home-Server
+    description: >-
+      Liste der Server (Name, URL der Web-Oberfläche inkl. Port, Benutzer, Passwort).
+      Optional: color (Hex-Farbe) und dns_address (IP[:Port] für den DNS-Test, Standard ist der Host der URL).
+  sync_url:
+    name: AdGuard Home Sync – URL
+    description: Adresse der Sync-API, z. B. http://192.168.10.11:8080. Leer lassen, wenn kein Sync genutzt wird.
+  sync_username:
+    name: AdGuard Home Sync – Benutzer
+    description: Nur nötig, wenn API_USERNAME im Sync gesetzt ist.
+  sync_password:
+    name: AdGuard Home Sync – Passwort
+  origin:
+    name: Origin-Server
+    description: Server, auf den eigene Regeln geschrieben werden. „auto“ übernimmt den Origin aus AdGuard Home Sync.
+  poll_interval:
+    name: Abfrageintervall (Sekunden)
+    description: Wie oft Status und Statistik der Server abgefragt werden.
+  querylog_poll_interval:
+    name: Query-Log-Intervall (Sekunden)
+    description: Wie oft neue Query-Log-Einträge für die Statistik übernommen werden.
+  history_raw_days:
+    name: Detaildaten aufbewahren (Tage)
+    description: Einzelne Anfragen für Client-Details und Auswertungen. Wird nicht gesichert.
+  history_hourly_days:
+    name: Stündliche Historie aufbewahren (Tage)
+    description: Stündliche Zusammenfassungen für Langzeit-Statistiken (Teil der HA-Backups).
+  dns_probe_domain:
+    name: Domain für den DNS-Test
+    description: Wird regelmäßig direkt über Port 53 bei jedem Server aufgelöst.
+  dns_probe_interval:
+    name: DNS-Test-Intervall (Sekunden)
+    description: Jeder Test ist eine echte Anfrage und erscheint im Query-Log der Server.
